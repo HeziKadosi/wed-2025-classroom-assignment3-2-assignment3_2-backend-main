@@ -50,7 +50,7 @@ app.get("/",function(req,res)
 // app.use(cors(corsConfig));
 // app.options("*", cors(corsConfig));
 
-var port = process.env.PORT || "80"; //local=3000 remote=80
+var port = process.env.PORT || "3000"; //local=3000 remote=80
 //#endregion
 const user = require("./routes/user");
 const recipes = require("./routes/recipes");
@@ -105,3 +105,19 @@ process.on("SIGINT", function () {
   }
   process.exit();
 });
+
+document.getElementById("search-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const query = document.getElementById("search-input").value;
+  const number = document.getElementById("num-results").value;
+  const response = await fetch(`/search?query=${query}&number=${number}`);
+  const data = await response.json();
+  if (response.status !== 200) {
+    alert("Error: " + data);
+    return;
+  }
+  displayRecipes(data);
+});
+
+
+
