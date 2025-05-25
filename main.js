@@ -106,18 +106,6 @@ process.on("SIGINT", function () {
   process.exit();
 });
 
-document.getElementById("search-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const query = document.getElementById("search-input").value;
-  const number = document.getElementById("num-results").value;
-  const response = await fetch(`/search?query=${query}&number=${number}`);
-  const data = await response.json();
-  if (response.status !== 200) {
-    alert("Error: " + data);
-    return;
-  }
-  displayRecipes(data);
-});
 
 
 

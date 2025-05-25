@@ -1,21 +1,22 @@
+
 openapi: 3.0.0
 info:
   title: Recipes api
   description: API for recipes project
   version: 1.0.1
+
 servers:
-  # local:
-  - url: "http://127.0.0.1:80"
-    # remote:
-    # - url: "http://132.72.65.211"
-    description: SwaggerHub API Auto Mocking hey
+  - url: "http://127.0.0.1:3000"
+    description: Local server
+
 tags:
   - name: Auth
     description: All authentication related routes
   - name: Users
     description: All the user's personal app info
   - name: Recipes
-    description: All reciepes general info
+    description: All recipes general info
+
 paths:
   /register:
     post:
@@ -35,6 +36,7 @@ paths:
           description: A new user has been added
         "400":
           description: wrong input parameters
+
   /login:
     post:
       tags:
@@ -60,80 +62,224 @@ paths:
                 example: session=87s97sdhgf279293f8w0e9
         "401":
           description: Authentication failed
+
   /logout:
     post:
       tags:
         - Auth
-      summary: logout a user from the system and delete his cookie
+      summary: logout a user from the system
       responses:
         "200":
-          description: "the user has ben successfully logged out"
+          description: the user has been successfully logged out
+
   /users/favorites:
     get:
       tags:
         - Users
-      summary: Return the favorite recipes that were saved by user
-      description: Get an array of recipes that were saved by a specific user
+      summary: Return the favorite recipes saved by user
       responses:
         "200":
-          description: data about the user's favorites recipes returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/RecipePreview"
+          description: list of favorite recipes
         "401":
-          description: user is not authorized
+          description: Unauthorized
       security:
-        - cookieAuth: []
+        - bearerAuth: []
     post:
       tags:
         - Users
-      summary: save recipe in the favorites list of a user
-      description: save recipe in the favorites list of a user
+      summary: Save a recipe as favorite
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                reciepeId:
-                  type: string
-                  description: reciepe's id which the user saved
-                  example: 716429
+                recipeId:
+                  type: integer
       responses:
         "200":
-          description: The Recipe successfully saved as favorite
+          description: Recipe successfully saved
         "401":
-          description: user is not authorized
+          description: Unauthorized
       security:
-        - cookieAuth: []
-  /recipes/{recipeId}:
-    get:
+        - bearerAuth: []
+
+  /users/favorites/{recipeId}:
+    delete:
       tags:
-        - Recipes
-      summary: Return preview details on recipe by his ID
-      description: Return preview details on recipe by his ID
+        - Users
+      summary: Remove a recipe from the user's favorites
       parameters:
-        - name: recipeId
-          in: path
-          description: recipe's id
+        - in: path
+          name: recipeId
           required: true
-          style: simple
-          explode: false
           schema:
             type: integer
       responses:
         "200":
-          description: data about the recipe
+          description: Recipe removed from favorites
+        "404":
+          description: Recipe not found in favorites
+        "401":
+          description: User not logged in
+      security:
+        - bearerAuth: []
+
+  /my-recipes:
+    get:
+      tags:
+        - Users
+      summary: Get all user-created recipes
+      responses:
+        "200":
+          description: List of personal recipes
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RecipePreview"
-        "404":
-          description: recipeId is not exists
+                $ref: '#/components/schemas/RecipeList'
+
+  /family-recipes:
+    get:
+      tags:
+        - Users
+      summary: Get family recipes
+      responses:
+        "200":
+          description: List of family recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+
+  /add-recipe:
+    post:
+      tags:
+        - Users
+      summary: Create a new personal or family recipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewRecipeRequest'
+      responses:
+        "201":
+          description: Recipe created successfully
+        "400":
+          description: Invalid input
+        "401":
+          description: User not authenticated
+      security:
+        - bearerAuth: []
+
+  /recipes/last-watched:
+    get:
+      tags:
+        - Recipes
+      summary: Get last watched recipes
+      responses:
+        "200":
+          description: Last 3 watched recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /recipes/random:
+    get:
+      tags:
+        - Recipes
+      summary: Get random recipes
+      parameters:
+        - name: number
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 3
+      responses:
+        "200":
+          description: List of random recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+
+  /recipes/{id}/like:
+    post:
+      tags:
+        - Recipes
+      summary: Like a recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recipe liked
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - Recipes
+      summary: Unlike a recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recipe unliked
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /search:
+    get:
+      tags:
+        - Recipes
+      summary: Search recipes by keyword
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: number
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: List of matching recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+        "400":
+          description: Missing query
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     User:
       type: object
