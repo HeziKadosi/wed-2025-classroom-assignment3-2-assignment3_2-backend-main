@@ -67,3 +67,4 @@ CREATE TABLE user_family_recipes (
   FOREIGN KEY (user_id) REFERENCES users(user_id),
   FOREIGN KEY (recipe_id) REFERENCES family_recipes(recipe_id)
 );
+

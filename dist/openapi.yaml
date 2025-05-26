@@ -105,6 +105,23 @@ paths:
       security:
         - bearerAuth: []
 
+  /users/user-details:
+    get:
+      tags:
+        - Users
+      summary: Get user details
+      responses:
+        "200":
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
   /users/favorites/{recipeId}:
     delete:
       tags:
@@ -126,20 +143,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /my-recipes:
-    get:
-      tags:
-        - Users
-      summary: Get all user-created recipes
-      responses:
-        "200":
-          description: List of personal recipes
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeList'
-
-  /family-recipes:
+  /users/family:
     get:
       tags:
         - Users
@@ -152,7 +156,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecipeList'
 
-  /add-recipe:
+  /users/myRecipes:
+    get:
+      tags:
+        - Users
+      summary: Get all user-created recipes
+      responses:
+        "200":
+          description: List of personal recipes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+
     post:
       tags:
         - Users
@@ -173,10 +189,39 @@ paths:
       security:
         - bearerAuth: []
 
-  /recipes/last-watched:
+  /users/myRecipes/{recipeId}:
+    delete:
+      tags:
+        - Users
+      summary: Delete a recipe created by the logged-in user
+      description: |
+        Deletes a recipe from the system, only if the logged-in user is its creator.
+        Requires user authentication via bearer token.
+      parameters:
+        - in: path
+          name: recipeId
+          required: true
+          description: ID of the recipe to delete
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recipe deleted successfully
+        "401":
+          description: User not logged in
+        "403":
+          description: User is not authorized to delete this recipe
+        "404":
+          description: Recipe not found
+      security:
+        - bearerAuth: []
+
+
+
+  /users/last-watched:
     get:
       tags:
-        - Recipes
+        - Users
       summary: Get last watched recipes
       responses:
         "200":
@@ -190,18 +235,13 @@ paths:
       security:
         - bearerAuth: []
 
+
+
   /recipes/random:
     get:
       tags:
         - Recipes
       summary: Get random recipes
-      parameters:
-        - name: number
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 3
       responses:
         "200":
           description: List of random recipes
@@ -338,6 +378,41 @@ components:
       example:
         username: my_name
         password: my_name@12
+    NewRecipeRequest:
+      type: object
+      required:
+        - title
+        - photo
+        - preparation_time
+        - groceries_list
+        - preparation_instructions
+      properties:
+        title:
+          type: string
+          example: "My favorite shakshuka"
+        photo:
+          type: string
+          format: uri
+          example: "https://example.com/photo.jpg"
+        preparation_time:
+          type: integer
+          example: 20
+        groceries_list:
+          type: string
+          example: "Eggs, Tomatoes, Onion, Olive oil"
+        preparation_instructions:
+          type: string
+          example: "1. Heat oil\n2. Fry onion\n3. Add tomatoes..."
+        isVegan:
+          type: boolean
+          example: false
+        isVegetarian:
+          type: boolean
+          example: true
+        isGlutenFree:
+          type: boolean
+          example: true
+
     RecipePreview:
       type: object
       properties:
@@ -374,3 +449,8 @@ components:
           type: boolean
           description: indication if the recipe is gluten free
           example: false
+
+    RecipeList:
+      type: array
+      items:
+        $ref: '#/components/schemas/RecipePreview'

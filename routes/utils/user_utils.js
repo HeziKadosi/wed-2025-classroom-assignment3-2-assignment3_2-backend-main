@@ -1,3 +1,4 @@
+const e = require("express");
 const DButils = require("./DButils");
 
 async function markAsFavorite(user_id, recipe_id){
@@ -9,7 +10,19 @@ async function getFavoriteRecipes(user_id){
     return recipes_id;
 }
 
+async function getMyRecipes(user_id) {
+  const recipes = await DButils.execQuery(`SELECT * FROM recipes WHERE creator_id = ${user_id}`);
+  return recipes;
+}
+
+async function getUserDetails(user_id) {
+    const user_details = await DButils.execQuery(`SELECT * FROM users WHERE user_id = ${user_id}`);
+    delete user_details[0].password; // Remove password from the details
+    return user_details[0];
+    }
 
 
 exports.markAsFavorite = markAsFavorite;
 exports.getFavoriteRecipes = getFavoriteRecipes;
+exports.getMyRecipes = getMyRecipes;
+exports.getUserDetails = getUserDetails;
