@@ -125,41 +125,41 @@ router.get('/family', async (req,res,next) => {
   }
 });
 
-/**
- * This path gets body with recipeId and save this recipe in the family list of the logged-in user
- */
-router.post('/family', async (req,res,next) => {
-  try{
-    // Check if the recipeId is in the family list
-    const recipe_id = req.body.recipeId;
-    if (recipe_id in user_utils.getFamilyRecipes(req.session.user_id)){
-      return res.status(410).send("You have saved this recipe as family already");
-    }
-    const user_id = req.session.user_id;
-    await user_utils.markAsFamily(user_id,recipe_id);
-    res.status(200).send("The Recipe successfully saved as family");
-    } catch(error){
-    next(error);
-  }
-});
+// /**
+//  * This path gets body with recipeId and save this recipe in the family list of the logged-in user
+//  */
+// router.post('/family', async (req,res,next) => {
+//   try{
+//     // Check if the recipeId is in the family list
+//     const recipe_id = req.body.recipeId;
+//     if (recipe_id in user_utils.getFamilyRecipes(req.session.user_id)){
+//       return res.status(410).send("You have saved this recipe as family already");
+//     }
+//     const user_id = req.session.user_id;
+//     await user_utils.markAsFamily(user_id,recipe_id);
+//     res.status(200).send("The Recipe successfully saved as family");
+//     } catch(error){
+//     next(error);
+//   }
+// });
 
-/**
- * This path gets recipeId and delete this recipe from the family list of the logged-in user
- */
-router.delete('/family', async (req,res,next) => {
-  try{
-    // Check if the recipeId is in the family list
-    const recipe_id = req.body.recipeId;
-    if (!(recipe_id in user_utils.getFamilyRecipes(req.session.user_id))){
-      return res.status(409).send("You have not saved this recipe as family yet");
-    }
-    const user_id = req.session.user_id;
-    await user_utils.removeFromFamily(user_id,recipe_id);
-    res.status(200).send("The Recipe successfully removed from family");
-  } catch(error){
-    next(error);
-  }
-});
+// /**
+//  * This path gets recipeId and delete this recipe from the family list of the logged-in user
+//  */
+// router.delete('/family', async (req,res,next) => {
+//   try{
+//     // Check if the recipeId is in the family list
+//     const recipe_id = req.body.recipeId;
+//     if (!(recipe_id in user_utils.getFamilyRecipes(req.session.user_id))){
+//       return res.status(409).send("You have not saved this recipe as family yet");
+//     }
+//     const user_id = req.session.user_id;
+//     await user_utils.removeFromFamily(user_id,recipe_id);
+//     res.status(200).send("The Recipe successfully removed from family");
+//   } catch(error){
+//     next(error);
+//   }
+// });
 
 /**
  * This path gets recipeId and add new recipe (created by user) to my reciipes list of the logged-in user
@@ -214,6 +214,31 @@ router.delete('/myRecipes/:recipeId', async (req,res,next) => {
     res.status(200).send("The Recipe successfully removed from recipes");
   } catch(error){
     next(error);
+  }
+});
+
+/**
+ * This path returns the last 3 watched recipes by the logged-in user
+ */
+router.get("/last-watched", async (req, res, next) => {
+  try {
+    if (!req.session || !req.session.user_id) {
+      return res.status(401).send("Unauthorized");
+    }
+    const user_id = req.session.user_id;
+    const result = await DButils.execQuery(`
+      SELECT recipe_id
+      FROM user_recipe_views
+      WHERE user_id = ${user_id}
+      ORDER BY viewed_at DESC
+      LIMIT 3;`);
+    const recipe_ids = result.map(r => r.recipe_id);
+    const recipes = await Promise.all(
+      recipe_ids.map(id => recipe_utils.getRecipeDetails(id))
+    );
+    res.status(200).send(recipes);
+  } catch (err) {
+    next(err);
   }
 });
 

@@ -68,3 +68,10 @@ CREATE TABLE user_family_recipes (
   FOREIGN KEY (recipe_id) REFERENCES family_recipes(recipe_id)
 );
 
+CREATE TABLE user_recipe_views (
+  user_id INT NOT NULL,
+  recipe_id INT NOT NULL,
+  viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, recipe_id)
+);
+
