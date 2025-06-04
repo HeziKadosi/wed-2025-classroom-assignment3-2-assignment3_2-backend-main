@@ -250,7 +250,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecipeList'
 
-  /recipes/{id}/like:
+  /recipes/like/{id}:
     post:
       tags:
         - Recipes
@@ -266,6 +266,8 @@ paths:
           description: Recipe liked
         "401":
           description: Unauthorized
+        "300":
+          description: Recipe already liked
       security:
         - bearerAuth: []
     delete:
@@ -286,32 +288,62 @@ paths:
       security:
         - bearerAuth: []
 
-  /search:
+  /recipes/search:
     get:
-      tags:
-        - Recipes
-      summary: Search recipes by keyword
+      summary: Search for recipes by name with optional filters
+      description: Returns a list of recipes matching the search query and optional filters.
       parameters:
         - name: query
           in: query
           required: true
           schema:
             type: string
+          description: The search term to query recipes by.
         - name: number
           in: query
           required: false
           schema:
             type: integer
             default: 5
+          description: The number of results to return (default 5).
+        - name: cuisine
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by cuisine type (e.g., "italian", "mexican").
+        - name: diet
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by diet type (e.g., "ketogenic", "paleo", "vegetarian").
+        - name: intolerances
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of intolerances (e.g., "egg,peanut,gluten").
       responses:
-        "200":
-          description: List of matching recipes
+        '200':
+          description: A list of recipe results
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecipeList'
-        "400":
-          description: Missing query
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    image:
+                      type: string
+        '400':
+          description: Bad request (e.g., missing query)
+        '500':
+          description: Internal server error (e.g., Spoonacular API failure)
 
 components:
   securitySchemes:
@@ -451,6 +483,14 @@ components:
           example: false
 
     RecipeList:
-      type: array
-      items:
-        $ref: '#/components/schemas/RecipePreview'
+      type: object
+      properties:
+        recipes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipePreview'
+        totalResults:
+          type: integer
+          description: Total number of recipes found
+          example: 100
+          

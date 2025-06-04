@@ -75,3 +75,8 @@ CREATE TABLE user_recipe_views (
   PRIMARY KEY (user_id, recipe_id)
 );
 
+CREATE TABLE IF NOT EXISTS user_liked_recipes (
+  user_id INT NOT NULL,
+  recipe_id INT NOT NULL,
+  PRIMARY KEY (user_id, recipe_id)
+);
