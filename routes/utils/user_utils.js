@@ -21,16 +21,7 @@ async function getUserDetails(user_id) {
     return user_details[0];
     }
 
-async function markAsWatched(user_id, recipe_id) {
-    await DButils.execQuery(`
-  INSERT INTO user_recipe_views (user_id, recipe_id, viewed_at)
-  VALUES (${user_id}, ${recipe_id}, CURRENT_TIMESTAMP)
-  ON DUPLICATE KEY UPDATE viewed_at = CURRENT_TIMESTAMP;`);
-}
-
-
 exports.markAsFavorite = markAsFavorite;
 exports.getFavoriteRecipes = getFavoriteRecipes;
 exports.getMyRecipes = getMyRecipes;
 exports.getUserDetails = getUserDetails;
-exports.markAsWatched = markAsWatched;

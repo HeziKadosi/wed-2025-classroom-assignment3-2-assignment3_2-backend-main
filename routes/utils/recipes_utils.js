@@ -108,6 +108,18 @@ async function searchRecipes(query, number = 5, filters = {}) {
   }
 }
 
+async function markAsWatched(user_id, recipe_id) {
+  const existingView = await DButils.execQuery(`SELECT * FROM user_recipe_views WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
+  if (existingView.length > 0) {
+    await DButils.execQuery(`UPDATE user_recipe_views SET viewed_at = CURRENT_TIMESTAMP WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
+    return;
+  }
+  else{
+    await DButils.execQuery(`INSERT INTO user_recipe_views (user_id, recipe_id, viewed_at)
+      VALUES (${user_id}, ${recipe_id}, CURRENT_TIMESTAMP)
+      ON DUPLICATE KEY UPDATE viewed_at = CURRENT_TIMESTAMP;`);
+  }
+}
 
 
 
@@ -119,6 +131,7 @@ exports.addLike = addLike;
 exports.removeLike = removeLike;
 exports.getRecipeDetails = getRecipeDetails;
 exports.getRandomRecipes = getRandomRecipes;
+exports.markAsWatched = markAsWatched;
 
 
 

@@ -236,6 +236,26 @@ paths:
         - bearerAuth: []
 
 
+  /recipes/show-recipe/{recipeId}:
+    get:
+      tags:
+        - Recipes
+      summary: Get full recipe details
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recipe details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipePreview'
+        "404":
+          description: Recipe not found
 
   /recipes/random:
     get:
@@ -290,6 +310,8 @@ paths:
 
   /recipes/search:
     get:
+      tags:
+        - Recipes
       summary: Search for recipes by name with optional filters
       description: Returns a list of recipes matching the search query and optional filters.
       parameters:

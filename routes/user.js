@@ -230,8 +230,7 @@ router.get("/last-watched", async (req, res, next) => {
       SELECT recipe_id
       FROM user_recipe_views
       WHERE user_id = ${user_id}
-      ORDER BY viewed_at DESC
-      LIMIT 3;`);
+      ORDER BY viewed_at DESC;`);
     const recipe_ids = result.map(r => r.recipe_id);
     const recipes = await Promise.all(
       recipe_ids.map(id => recipe_utils.getRecipeDetails(id))

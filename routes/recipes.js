@@ -59,6 +59,20 @@ router.get("/search", async (req, res, next) => {
   }
 });
 
+router.get("/show-recipe/:recipeId", async (req, res, next) => {
+  try {
+    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
+    res.send(recipe);
+    if (req.session && req.session.user_id) {
+      const user_id = req.session.user_id;
+      const recipe_id = req.params.recipeId;
+      await recipes_utils.markAsWatched(user_id, recipe_id);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 /**
  * This path returns a full details of a recipe by its id
@@ -67,6 +81,7 @@ router.get("/:recipeId", async (req, res, next) => {
   try {
     const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
     res.send(recipe);
+
   } catch (error) {
     next(error);
   }
