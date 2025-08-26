@@ -19,16 +19,16 @@ CREATE TABLE recipes (
   title VARCHAR(255),
   photo VARCHAR(255),
   preparation_time INT,
-  groceries_list TEXT,
-  preparation_instructions TEXT,
+  ingredients TEXT,
+  instructions TEXT,
   creator_id INT,
-  likes INT DEFAULT 0,
-  viewed BOOLEAN DEFAULT FALSE,
   isVegan BOOLEAN DEFAULT FALSE,
   isVegetarian BOOLEAN DEFAULT FALSE,
   isGlutenFree BOOLEAN DEFAULT FALSE,
   FOREIGN KEY (creator_id) REFERENCES users(user_id)
 );
+
+
 
 -- Favorites table (many-to-many)
 CREATE TABLE user_favorites (
