@@ -12,10 +12,10 @@ router.get("/", (req, res) => res.send("im here"));
 router.get("/random", async (req, res, next) => {
   console.log("Random recipes requested");
   try {
-    if (req.session?.user_id) {
-      return res.status(401).send("User logged in");
-    }
-    const recipes = await recipes_utils.getRandomRecipes();
+    // if (req.session?.user_id) {
+    //   return res.status(401).send("User logged in");
+    // }
+    const recipes = await recipes_utils.getRandomRecipes(req.session?.user_id);
     res.status(200).send(recipes);
   } catch (error) {
     next(error);
@@ -31,9 +31,6 @@ router.get("/search", async (req, res, next) => {
     const number = parseInt(req.query.number) || 5;
     const user_id = req.session?.user_id;
 
-    if (!query) {
-      return res.status(400).send({ message: "Missing search query", success: false });
-    }
 
     // check if the search term already exists in the user's search history
     const existingSearches = await DButils.execQuery(`
@@ -52,7 +49,7 @@ router.get("/search", async (req, res, next) => {
     if (req.query.diet) filters.diet = req.query.diet;
     if (req.query.intolerances) filters.intolerances = req.query.intolerances; // comma-separated
 
-    const results = await recipes_utils.searchRecipes(query, number, filters);
+    const results = await recipes_utils.searchRecipes(query, number, filters, user_id);
     res.status(200).send(results);
   } catch (error) {
     next(error);
@@ -61,7 +58,7 @@ router.get("/search", async (req, res, next) => {
 
 router.get("/show-recipe/:recipeId", async (req, res, next) => {
   try {
-    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
+    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId, req.session?.user_id);
     res.send(recipe);
     if (req.session && req.session.user_id) {
       const user_id = req.session.user_id;
@@ -79,9 +76,9 @@ router.get("/show-recipe/:recipeId", async (req, res, next) => {
  */
 router.get("/:recipeId", async (req, res, next) => {
   try {
-    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
-    res.send(recipe);
-
+    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId, req.session?.user_id);
+    res.send({recipe});
+    console.log("Recipe details:", recipe);
   } catch (error) {
     next(error);
   }
@@ -97,7 +94,7 @@ router.delete("/:recipeId", async (req, res, next) => {
       return res.status(401).send("User not logged in");
     }
     // Check if the recipe exists
-    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
+    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId, req.session.user_id);
     if (!recipe) {
       return res.status(404).send("Recipe not found");
     }
@@ -121,6 +118,7 @@ router.post("/like/:recipeId", async (req, res, next) => {
     if (!req.session || !req.session.user_id) {
       return res.status(401).send("User not logged in");
     }
+    console.log('id', req.session.user_id);
     // Check if the user has already liked the recipe
     const user_id = req.session.user_id;
     const likedRecipes = await recipes_utils.getLikedRecipes(user_id);
