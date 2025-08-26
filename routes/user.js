@@ -8,6 +8,7 @@ const recipe_utils = require("./utils/recipes_utils");
  * Authenticate all incoming requests by middleware
  */
 router.use(async function (req, res, next) {
+  console.log("User authenticated:", req.user_id);
   if (req.session && req.session.user_id) {
     DButils.execQuery("SELECT user_id FROM users").then((users) => {
       if (users.find((x) => x.user_id === req.session.user_id)) {
@@ -26,12 +27,13 @@ router.use(async function (req, res, next) {
  */
 router.post("/favorites", async (req, res, next) => {
   try {
+    console.log("Adding recipe to favorites", req.session.user_id, req.body.recipeId);
     if (!req.session || !req.session.user_id)
       return res.status(401).send("User not logged in");
     const user_id = req.session.user_id;
     const recipe_id = req.body.recipeId;
     const exists = await DButils.execQuery(`
-      SELECT * FROM user_favorites WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}
+      SELECT * FROM user_liked_recipes WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}
     `);
     if (exists.length > 0) {
       return res.status(409).send("Recipe already in favorites");
@@ -44,7 +46,7 @@ router.post("/favorites", async (req, res, next) => {
       VALUES (${recipe_id}, '${title}', '${image}', ${readyInMinutes}, 'N/A', 'N/A', NULL)`);
     }
     await DButils.execQuery(`
-      INSERT INTO user_favorites (user_id, recipe_id)
+      INSERT INTO user_liked_recipes (user_id, recipe_id)
       VALUES (${user_id}, ${recipe_id})
     `);
     res.status(200).send("Recipe added to favorites");
@@ -63,11 +65,27 @@ router.get('/favorites', async (req, res, next) => {
     const recipes_id = await user_utils.getFavoriteRecipes(user_id);
     const recipes_id_array = recipes_id.map((element) => element.recipe_id); // extract IDs
     const favorite_recipes = await Promise.all(
-      recipes_id_array.map((id) => recipe_utils.getRecipeDetails(id))
+      recipes_id_array.map((id) => recipe_utils.getRecipeDetails(id, user_id))
     );
     res.status(200).send(favorite_recipes);
   } catch (error) {
     next(error);
+  }
+});
+
+/**
+ * This path gets recipeId and userId and checks if the recipe is in the favorites list of the logged-in user
+ */
+router.get("/favorite/:recipeId", async (req, res, next) => {
+  try {
+    if (!req.session || !req.session.user_id)
+      return res.status(401).send("User not logged in");
+    const user_id = req.session.user_id;
+    const recipe_id = req.params.recipeId;
+    const exists = await user_utils.isRecipeFavorite(user_id, recipe_id);
+    res.status(200).send(exists);
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -81,11 +99,11 @@ router.delete("/favorites/:recipeId", async (req, res, next) => {
       return res.status(401).send("User not logged in");
     const user_id = req.session.user_id;
     const recipe_id = req.params.recipeId;
-    const exists = await DButils.execQuery(`SELECT * FROM user_favorites WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
+    const exists = await DButils.execQuery(`SELECT * FROM user_liked_recipes WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
     if (exists.length === 0) {
       return res.status(404).send("Recipe not found in favorites");
     }
-    await DButils.execQuery(`DELETE FROM user_favorites WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
+    await DButils.execQuery(`DELETE FROM user_liked_recipes WHERE user_id = ${user_id} AND recipe_id = ${recipe_id}`);
     res.status(200).send("Recipe removed from favorites");
   } catch (err) {
     next(err);
@@ -122,6 +140,27 @@ router.get('/family', async (req,res,next) => {
     res.status(200).send(results);
   } catch(error){
     next(error); 
+  }
+});
+
+/**
+ * This path gets recipeId and return the recipeif  is in the family list of the logged-in user
+ */
+router.get('/family/:recipeId', async (req, res, next) => {
+  try {
+    if (!req.session || !req.session.user_id)
+      return res.status(401).send("User not logged in");
+    const user_id = req.session.user_id;
+    const recipe_id = req.params.recipeId;
+    const family_recipes = await user_utils.getFamilyRecipes(user_id);
+    if (recipe_id in family_recipes) {
+      const recipe = await recipe_utils.getRecipeDetails(recipe_id);
+      res.status(200).send(recipe);
+    } else {
+      res.status(404).send("Recipe not found in family list");
+    }
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -164,36 +203,85 @@ router.get('/family', async (req,res,next) => {
 /**
  * This path gets recipeId and add new recipe (created by user) to my reciipes list of the logged-in user
  */
-router.post('/myRecipes', async (req,res,next) => {
-  try{
-    // Check if the user is logged in
+router.post('/myRecipes', async (req, res, next) => {
+  try {
+    console.log("Creating new recipe for user:", req.session.user_id);
     if (!req.session || !req.session.user_id)
       return res.status(401).send("User not logged in");
-    
-    const creator_id = req.session.user_id;
-    const { title, photo, preparation_time, groceries_list, preparation_instructions, isVegan, isVegetarian, isGlutenFree } = req.body;
 
-    await DButils.execQuery(`INSERT INTO recipes (title, photo, preparation_time, groceries_list, preparation_instructions, creator_id, isVegan, isVegetarian, isGlutenFree)
-      VALUES ('${title}', '${photo}', ${preparation_time}, '${groceries_list}', '${preparation_instructions}', ${creator_id}, ${isVegan}, ${isVegetarian}, ${isGlutenFree})`);
+    const creator_id = req.session.user_id;
+    const {
+      title,
+      photo,
+      preparation_time,
+      ingredients,
+      instructions,
+      isVegan = false,
+      isVegetarian = false,
+      isGlutenFree = false
+    } = req.body;
+    if (!Array.isArray(ingredients) || !Array.isArray(instructions)) {
+      return res.status(400).send("Ingredients and instructions must be arrays");
+    }
+    const escape = str => str.replace(/'/g, "''");
+
+    const ingredientsJSON = escape(JSON.stringify(ingredients));
+    const instructionsJSON = escape(JSON.stringify(instructions));
+    const safeTitle = escape(title);
+    const safePhoto = escape(photo);
+
+    const query = `
+      INSERT INTO recipes 
+        (title, photo, preparation_time, ingredients, instructions, creator_id, isVegan, isVegetarian, isGlutenFree)
+      VALUES 
+        ('${safeTitle}', '${safePhoto}', ${preparation_time}, '${ingredientsJSON}', '${instructionsJSON}', ${creator_id}, ${isVegan}, ${isVegetarian}, ${isGlutenFree})
+    `;
+
+    await DButils.execQuery(query);
     res.status(201).send("Recipe created successfully");
-    } catch(error){
+  } catch (error) {
     next(error);
   }
 });
 
+
+
 /**
  * This path returns the my recipes that were saved by the logged-in user
  */
-router.get('/myRecipes', async (req,res,next) => {
-  try{
+router.get('/myRecipes', async (req, res, next) => {
+  console.log("Getting my recipes for user:", req.session.user_id);
+  try {
     if (!req.session || !req.session.user_id)
       return res.status(401).send("User not logged in");
+
     const recipes = await user_utils.getMyRecipes(req.session.user_id);
     res.status(200).send(recipes);
-  } catch(error){
-    next(error); 
+  } catch (error) {
+    next(error);
   }
 });
+
+
+router.get('/myRecipes/:id', async (req, res, next) => {
+  try {
+    if (!req.session || !req.session.user_id)
+      return res.status(401).send("User not logged in");
+
+    const recipe_id = req.params.id;
+    const user_id = req.session.user_id;
+
+    const recipe = await user_utils.getMyRecipeById(user_id, recipe_id);
+
+    if (!recipe) return res.status(404).send("Recipe not found");
+
+    res.status(200).send({ recipe });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 
 /**
  * This path gets recipeId and delete this recipe from the my recipes list of the logged-in user
