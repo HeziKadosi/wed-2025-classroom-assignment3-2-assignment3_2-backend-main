@@ -18,7 +18,7 @@ tags:
     description: All recipes general info
 
 paths:
-  /register:
+  /Register:
     post:
       tags:
         - Auth
@@ -37,7 +37,7 @@ paths:
         "400":
           description: wrong input parameters
 
-  /login:
+  /Login:
     post:
       tags:
         - Auth
@@ -102,6 +102,32 @@ paths:
           description: Recipe successfully saved
         "401":
           description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /users/favorite/{recipeId}:
+    get:
+      tags:
+        - Users
+      summary: Check if a recipe is in the user's favorites
+      parameters:
+        - in: path
+          name: recipeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Whether the user liked the recipe
+          content:
+            application/json:
+              schema:
+                type: boolean
+                example: true
+        "404":
+          description: Recipe not found in favorites
+        "401":
+          description: User not logged in
       security:
         - bearerAuth: []
 
@@ -438,25 +464,47 @@ components:
         - title
         - photo
         - preparation_time
-        - groceries_list
-        - preparation_instructions
+        - ingredients
+        - instructions
       properties:
         title:
           type: string
-          example: "My favorite shakshuka"
+          example: "Baked Rigatoni"
         photo:
           type: string
           format: uri
-          example: "https://example.com/photo.jpg"
+          example: "https://img.spoonacular.com/recipes/633766-556x370.jpg"
         preparation_time:
           type: integer
-          example: 20
-        groceries_list:
-          type: string
-          example: "Eggs, Tomatoes, Onion, Olive oil"
-        preparation_instructions:
-          type: string
-          example: "1. Heat oil\n2. Fry onion\n3. Add tomatoes..."
+          example: 45
+        ingredients:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 11090
+              name:
+                type: string
+                example: "broccoli flowerets"
+              amount:
+                type: number
+                example: 14
+              unit:
+                type: string
+                example: "ounces"
+        instructions:
+          type: array
+          items:
+            type: object
+            properties:
+              number:
+                type: integer
+                example: 1
+              step:
+                type: string
+                example: "Preheat oven to 400 degrees..."
         isVegan:
           type: boolean
           example: false
@@ -465,7 +513,8 @@ components:
           example: true
         isGlutenFree:
           type: boolean
-          example: true
+          example: false
+
 
     RecipePreview:
       type: object
